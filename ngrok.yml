@@ -1,0 +1,7 @@
+tunnels:
+  web1:
+    proto: http
+    addr: 8000
+  web2:
+    proto: http
+    addr: 8001

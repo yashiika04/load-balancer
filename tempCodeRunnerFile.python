@@ -84,8 +84,8 @@ def heavy_task():
 def simulate_traffic():
     MAX_REQUESTS = 15
     responses = []
-    base_url = f"http://localhost:{SERVER_PORT}/heavy-task"
- 
+    base_url = "http://localhost:{SERVER_PORT}/heavy-task"  
+
     # Using a ThreadPoolExecutor to make parallel HTTP requests.
     with ThreadPoolExecutor(max_workers=MAX_REQUESTS) as executor:
         # Dictionary to track which future corresponds to which API call id.
