@@ -69,6 +69,22 @@ def proxy_request():
 
  # Simulated state for demonstration (replace with real metrics collection)
 
+@app.route("/server-metrics")
+def fetch_server_metrics():
+    metrics_data = {}
+
+    for server in SERVERS:
+        try:
+            response = requests.get(f"{server}/metrics")
+            response.raise_for_status()  # Ensure HTTP 200
+
+            # Instead of JSON, store raw Prometheus text format
+            metrics_data[server] = {"metrics": response.text}
+
+        except requests.exceptions.RequestException as e:
+            metrics_data[server] = {"error": str(e)}
+
+    return metrics_data
 
 # for setting up environment for Load Balancer
 

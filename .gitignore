@@ -20,7 +20,7 @@ __pycache__/
 *.secret  
 
 # Dependencies  
-venv/  
+AgentTraining/tf_agents_env
 pip-log.txt  
 pip-delete-this-directory.txt  
 

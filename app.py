@@ -79,6 +79,7 @@ def heavy_task():
     except Exception as e:
         return str(e), 500
 
+
 # The /simulate-traffic endpoint fires 15 parallel requests to /heavy-task.
 @app.route("/simulate-traffic")
 def simulate_traffic():
