@@ -1,22 +1,23 @@
 import time
 import random
-import sys
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import sys 
 
 from flask import Flask, jsonify, Response, request
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-import requests
-from prometheus_client import generate_latest, CONTENT_TYPE_LATEST, CollectorRegistry, REGISTRY
-  
+from flask_limiter import Limiter  
+from flask_limiter.util import get_remote_address    
+ 
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST, REGISTRY
 from prometheus_client import Counter, Histogram, generate_latest
-from prometheus_flask_exporter import PrometheusMetrics
 
-limiter = Limiter(key_func=get_remote_address)
-global SERVER_PORT
-SERVER_PORT = 8005 # default port
+from prometheus_flask_exporter import PrometheusMetrics 
 
 app = Flask(__name__)
+limiter = Limiter(get_remote_address, app=app, default_limits=["5 per second"])   
+
+global SERVER_PORT
+SERVER_PORT = 8000
+
+
 limiter.init_app(app)   
 
 metrics = PrometheusMetrics(app)
@@ -58,20 +59,30 @@ def log_request(response):
 # --- Heavy Operation ---
 
 def heavyOperation(): 
-    # Random delay between 0 and 4 seconds
-    delay = random.random() * 4
+    """Simulate a heavy computation with a random delay"""
+    delay = random.uniform(0.5, 2)  # Delay between 0.5s and 2s
     time.sleep(delay)
     return "OK!!"
 
 # --- Endpoints ---
+ 
 
 @app.route("/")
 def index():
-    return jsonify({"message": "Ok!"})
+    return jsonify({"message": "Server is running!"})
 
-# The /heavy-task endpoint uses the rate limiter.
+# Server capacity limits
+server_capacity = {
+    8000: 8,   # Allow 5 requests per second
+    8001: 15,  # Allow 10 requests per second
+    8002: 16   # Allow 15 requests per second
+}
+
+SERVER_PORT = 8000  
+
+# Use the rate limiter to limit requests based on server capacity
 @app.route("/heavy-task")
-@limiter.limit("10 per second")
+@limiter.limit(lambda: f"{server_capacity.get(SERVER_PORT, 5)} per second")   
 def heavy_task():
     try:
         result = heavyOperation()
@@ -79,31 +90,7 @@ def heavy_task():
     except Exception as e:
         return str(e), 500
 
-
-# The /simulate-traffic endpoint fires 15 parallel requests to /heavy-task.
-@app.route("/simulate-traffic")
-def simulate_traffic():
-    MAX_REQUESTS = 15
-    responses = []
-    base_url = f"http://localhost:{SERVER_PORT}/heavy-task"
- 
-    # Using a ThreadPoolExecutor to make parallel HTTP requests.
-    with ThreadPoolExecutor(max_workers=MAX_REQUESTS) as executor:
-        # Dictionary to track which future corresponds to which API call id.
-        futures = {executor.submit(requests.get, base_url): i for i in range(MAX_REQUESTS)}
-        for future in as_completed(futures):
-            call_id = futures[future]
-            try:
-                response = future.result()
-                if response.status_code == 200:
-                    responses.append(f"API Call Id {call_id} Response: {response.text}\n")
-                else:
-                    responses.append(f"API Call Id {call_id} Failed: Request failed with status code {response.status_code}\n")
-            except Exception as e:
-                responses.append(f"API Call Id {call_id} Failed: {str(e)}\n")
- 
-    return "\n".join(responses)
-
+  
 # The /metrics endpoint exposes Prometheus metrics.
 @app.route("/metrics")
 def metrics():

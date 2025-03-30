@@ -20,12 +20,17 @@ __pycache__/
 *.secret  
 
 # Dependencies  
+loadBalancerEnv
 AgentTraining/tf_agents_env
+
+loadBalancingAlgorithms/__pycache__
+
 pip-log.txt  
 pip-delete-this-directory.txt  
 
 # Jupyter Notebook  
 .ipynb_checkpoints  
+prometheus-config.yml
 
 # OS-specific  
 .DS_Store  
