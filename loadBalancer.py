@@ -1,37 +1,33 @@
-from flask import Flask 
-import requests
-import subprocess
+from flask import Flask, jsonify
+import requests 
 import itertools
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import os 
+import os
+from dotenv import load_dotenv 
 import re
- 
-ALGORITHM = os.environ.get("RLAgent", "RoundRobin")  
+import time
 
-print("Algorithm selected: ",ALGORITHM) 
-
-if ALGORITHM == "RoundRobin":
-    from loadBalancingAlgorithms.RoundRobin import select_optimal_server
-elif ALGORITHM == "LeastConnection":
-    from loadBalancingAlgorithms.LeastConnection import select_optimal_server
-elif ALGORITHM == "RLAgent":
-    from loadBalancingAlgorithms.RL_Agent import select_optimal_server
-else:
-    raise ValueError(f"Invalid Load Balancing Algorithm: {ALGORITHM}")
+from loadBalancingAlgorithms.RoundRobin import RoundRobinLoadBalancer
+from loadBalancingAlgorithms.LeastConnection import LeastConnectionLoadBalancer
+from loadBalancingAlgorithms.RL_Agent import RLBasedLoadBalancer
  
-LOAD_BALANCER_PORT = int(os.environ.get("PORT_LOAD_BALANCER", 8005))
-SERVER_1_PORT = int(os.environ.get("PORT_SERVER_1", 8000))
-SERVER_2_PORT = int(os.environ.get("PORT_SERVER_2", 8001))
-SERVER_3_PORT = int(os.environ.get("PORT_SERVER_3", 8002))
+load_dotenv(override=True)  
+ 
+LB_ALGORITHM = os.getenv("LB_ALGO")  
+
+print("Algorithm selected: ",LB_ALGORITHM) 
+ 
+ 
+LOAD_BALANCER_PORT = int(os.environ.get("PORT_LOAD_BALANCER"))
+SERVER_1_PORT = int(os.environ.get("PORT_SERVER_1"))
+SERVER_2_PORT = int(os.environ.get("PORT_SERVER_2"))
+SERVER_3_PORT = int(os.environ.get("PORT_SERVER_3"))
 
 app = Flask(__name__) 
   
 backend_servers = [SERVER_1_PORT, SERVER_2_PORT, SERVER_3_PORT]
 server_processes = [] 
- 
-def start_server(port):
-    return subprocess.Popen(["python", "app.py", str(port)])
-
+   
 # Backend servers
 SERVERS = [
     f"http://127.0.0.1:{SERVER_1_PORT}",
@@ -41,6 +37,28 @@ SERVERS = [
  
 server_pool = itertools.cycle(SERVERS)
 
+policy_dir = "loadBalancingAlgorithms/saved_policies/load_balancing_trained_policy"
+serverMetricsUrl = "http://localhost:8005/server-metrics"
+
+class LoadBalancer:
+    def __init__(self, servers):
+        self.servers = servers
+
+        if LB_ALGORITHM == "RoundRobin":
+            self.strategy = RoundRobinLoadBalancer(servers)
+        elif LB_ALGORITHM == "LeastConnection":
+            self.strategy = LeastConnectionLoadBalancer(servers)
+        elif LB_ALGORITHM == "RLAgent":
+            self.strategy = RLBasedLoadBalancer(servers, policy_dir, serverMetricsUrl)
+        else:
+            raise ValueError(f"Invalid Load Balancing Algorithm: {LB_ALGORITHM}")
+
+    def select_optimal_server(self):
+        return self.strategy.select_optimal_server()
+
+ 
+lb = LoadBalancer(SERVERS)
+ 
 def parse_metrics(metrics_text):
     """
     Parse Prometheus text for performance KPIs:
@@ -87,79 +105,91 @@ def parse_metrics(metrics_text):
     } 
       
 
-@app.route("/")
-def hello():
-    return "Load Balancer is Running!"
-
+@app.route("/health-check")
+def health_check():
+    return jsonify({
+        "status": "OK",
+        "message": "Load Balancer is Running!",
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+    })
+    
 
 @app.route("/heavy-task")
 def proxy_request():
+
     """
     Simulate traffic load balancing by forwarding requests to servers.
     Uses ThreadPoolExecutor to send multiple requests in parallel.
     """
-    TOTAL_REQUESTS = 50
-    responses = []
+    
+    TOTAL_REQUESTS = 40
+    successes = 0
+    failures = 0
+    details = []
 
     with ThreadPoolExecutor(max_workers=TOTAL_REQUESTS) as executor:
-        future_to_server = {}
-
+        future_to_info = {}
         for i in range(TOTAL_REQUESTS):
             try:
-                # Select an optimal server
-                target_server = select_optimal_server(SERVERS)
+                target_server = lb.select_optimal_server()
                 print(f"Selected server: {target_server}")
             except Exception as e:
                 print(f"Algorithm failed, falling back to Round Robin. Error: {e}")
                 target_server = next(server_pool)
-
-            # Submit request to executor
-            future = executor.submit(requests.get, f"{target_server}/heavy-task")
-            future_to_server[future] = (target_server, i)
-
-        # Collect responses
-        for future in as_completed(future_to_server):
-            target_server, call_id = future_to_server[future]
+            future = executor.submit(requests.get, f"{target_server}/heavy-task", timeout=5)
+            future_to_info[future] = {"server": target_server, "call_id": i}
+        
+        for future in as_completed(future_to_info):
+            info = future_to_info[future]
             try:
                 response = future.result()
                 if response.status_code == 200:
-                    responses.append(f"API Call {call_id} → {target_server}: Success\n")
+                    successes += 1
+                    info["status"] = "Success"
                 else:
-                    responses.append(f"API Call {call_id} → {target_server}: Failed with {response.status_code}\n")
+                    failures += 1
+                    info["status"] = f"Failed with {response.status_code}"
             except Exception as e:
-                responses.append(f"API Call {call_id} → {target_server}: Failed with {str(e)}\n")
+                failures += 1
+                info["status"] = f"Failed with {str(e)}"
+            details.append(info)
 
-    return "\n".join(responses)
+    result = {
+        "total_requests": TOTAL_REQUESTS,
+        "successes": successes,
+        "failures": failures,
+        "details": details
+    }
+    return jsonify(result)
 
-   
+
 @app.route("/server-metrics")
 def fetch_server_metrics():
     metrics_data = {}
     for server in SERVERS:
         try:
-             
             response = requests.get(f"{server}/metrics", timeout=5)
-            response.raise_for_status()  # Raise an error for non-200 responses
-
-            # Parse the raw Prometheus text into structured data
+            response.raise_for_status()   
+ 
             parsed_data = parse_metrics(response.text)
             metrics_data[server] = {"metrics": parsed_data}
 
         except requests.exceptions.RequestException as e:
-            metrics_data[server] = {"error": str(e)}
+            print(f"Error fetching metrics from {server}: {e}")
+ 
+            fallback_metrics = {
+                "avg_successful_response_time": 10.0,   
+                "total_requests": 100.0,            
+                "failed_to_success_ratio": 1.0      
+            }
+
+            metrics_data[server] = {
+                "metrics": fallback_metrics,
+                "error": str(e)
+            }
 
     return metrics_data
 
-  
-def calculate_reward(state):
-    # A simple reward: negative sum of latencies (the lower, the better)
-    return -sum(server["latency"] for server in state.values())
  
-if __name__ == "__main__":
-
-    # Starting all the servers
-    for port in backend_servers:
-        process = start_server(port)
-        server_processes.append(process)
-
+if __name__ == "__main__":  
     app.run(host="0.0.0.0", port=LOAD_BALANCER_PORT)

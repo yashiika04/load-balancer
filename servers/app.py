@@ -16,7 +16,8 @@ limiter = Limiter(get_remote_address, app=app, default_limits=["5 per second"])
 
 global SERVER_PORT
 SERVER_PORT = 8000
- 
+
+
 limiter.init_app(app)   
 
 metrics = PrometheusMetrics(app)
@@ -72,9 +73,9 @@ def index():
 
 # Server capacity limits
 server_capacity = {
-    8000: 5,   # Allow 5 requests per second
-    8001: 10,  # Allow 10 requests per second
-    8002: 15   # Allow 15 requests per second
+    8000: 8,   # Allow 5 requests per second
+    8001: 15,  # Allow 10 requests per second
+    8002: 16   # Allow 15 requests per second
 }
 
 SERVER_PORT = 8000  

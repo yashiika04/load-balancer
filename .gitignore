@@ -32,6 +32,8 @@ pip-delete-this-directory.txt
 .ipynb_checkpoints  
 prometheus-config.yml
 
+commands.txt
+
 # OS-specific  
 .DS_Store  
 Thumbs.db  

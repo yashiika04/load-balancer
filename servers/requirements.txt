@@ -1,0 +1,7 @@
+Flask==2.2.5
+Werkzeug==2.2.3
+requests
+flask-limiter
+prometheus_client
+prometheus_flask_exporter 
+numpy

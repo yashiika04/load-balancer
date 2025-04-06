@@ -1,0 +1,31 @@
+version: "3.9"
+services:
+  server1:
+    build: .
+    container_name: server1
+    environment:
+      - PORT_SERVER_1=8000
+      - PORT_LOAD_BALANCER=8000
+    command: [ "python", "app.py", "8000" ]
+    ports:
+      - "8000:8000"
+
+  server2:
+    build: .
+    container_name: server2
+    environment:
+      - PORT_SERVER_2=8001
+      - PORT_LOAD_BALANCER=8001
+    command: [ "python", "app.py", "8001" ]
+    ports:
+      - "8001:8001"
+
+  server3:
+    build: .
+    container_name: server3
+    environment:
+      - PORT_SERVER_3=8002
+      - PORT_LOAD_BALANCER=8002
+    command: [ "python", "app.py", "8002" ]
+    ports:
+      - "8002:8002"

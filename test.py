@@ -1,5 +1,8 @@
 import os
- 
-ALGORITHM = os.environ.get("LB_ALGO", "RoundRobin")  
+from dotenv import load_dotenv
+import os
 
-print(ALGORITHM)
+load_dotenv(override=True)  
+
+value = os.getenv('LB_ALGO')
+print(value)

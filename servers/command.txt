@@ -1,0 +1,3 @@
+Run the following command to spin the servers
+
+docker-compose up --build

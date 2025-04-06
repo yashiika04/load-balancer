@@ -1,17 +1,28 @@
 import itertools
- 
-_server_cycle = None
+import requests
+import random
 
-def initialize(servers): 
-    global _server_cycle
-    _server_cycle = itertools.cycle(servers)
+class RoundRobinLoadBalancer:
+    def __init__(self, servers):
+        self.servers = servers
+        self._server_cycle = itertools.cycle(servers)
+    
+    def select_optimal_server(self):
+        """
+        Return the next healthy server in round-robin order.
+        If no healthy server is found, fall back to a random one.
+        """
+        for _ in range(len(self.servers)):
+            server = next(self._server_cycle)
+            try:
+                response = requests.get(server, timeout=3)
+                if response.status_code == 200:
+                    print(f"Round-robin selected server: {server}")
+                    return server
+            except requests.exceptions.RequestException:
+                continue
 
-def select_optimal_server(servers):
-    """
-    Return the next server in a round-robin fashion.
-    If the cycle is not yet initialized, it will be set up.
-    """
-    global _server_cycle
-    if _server_cycle is None:
-        _server_cycle = itertools.cycle(servers)
-    return next(_server_cycle)
+        fallback = random.choice(self.servers)
+        
+        print(f"No healthy servers found in round-robin. Returning random server: {fallback}")
+        return fallback
