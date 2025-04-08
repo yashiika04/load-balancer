@@ -20,10 +20,7 @@ __pycache__/
 *.secret  
 
 # Dependencies  
-loadBalancerEnv
-AgentTraining/tf_agents_env
-
-loadBalancingAlgorithms/__pycache__
+loadBalancerEnv  
 
 pip-log.txt  
 pip-delete-this-directory.txt  
