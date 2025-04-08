@@ -73,9 +73,9 @@ def index():
 
 # Server capacity limits
 server_capacity = {
-    8000: 8,   # Allow 5 requests per second
-    8001: 15,  # Allow 10 requests per second
-    8002: 16   # Allow 15 requests per second
+    8000: 8,   
+    8001: 15,   
+    8002: 16   
 }
 
 SERVER_PORT = 8000  

@@ -7,7 +7,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address    
  
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST, REGISTRY
-from prometheus_client import Counter, Histogram, generate_latest
+from prometheus_client import Counter, Histogram 
 
 from prometheus_flask_exporter import PrometheusMetrics 
 
@@ -64,17 +64,16 @@ def heavyOperation():
     return "OK!!"
 
 # --- Endpoints ---
- 
-
+  
 @app.route("/")
 def index():
     return jsonify({"message": "Server is running!"})
 
 # Server capacity limits
 server_capacity = {
-    8000: 5,   # Allow 5 requests per second
+    8000: 15,   # Allow 15 requests per second
     8001: 10,  # Allow 10 requests per second
-    8002: 15   # Allow 15 requests per second
+    8002: 5   # Allow 5 requests per second
 }
 
 SERVER_PORT = 8000  
@@ -84,8 +83,7 @@ SERVER_PORT = 8000
 @limiter.limit(lambda: f"{server_capacity.get(SERVER_PORT, 5)} per second")   
 def heavy_task():
     try:
-        result = heavyOperation()
-        return result
+        return heavyOperation() 
     except Exception as e:
         return str(e), 500
 

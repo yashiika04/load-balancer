@@ -3,8 +3,7 @@ import concurrent.futures
 import time
 import random
 
-def make_request(url, delay):
-    """Sends a request to the URL with an optional delay."""
+def make_request(url, delay): 
     time.sleep(delay)  
     try:
         response = requests.get(url)

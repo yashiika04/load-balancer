@@ -67,18 +67,15 @@ def parse_metrics(metrics_text):
       - avg_successful_response_time: computed as sum/count from histogram.
       - failed_to_success_ratio: ratio of failed to successful requests.
       - total_requests: sum of failed and successful requests.
-    """
-    # Extract count for failed responses (HTTP 429)
+    """ 
     failed_count_match = re.search(
         r'flask_http_request_total\{method="GET",status="429"\}\s+([\d.]+)', metrics_text)
     failed_count = float(failed_count_match.group(1)) if failed_count_match else 0.0
-
-    # Extract count for successful responses (HTTP 200)
+ 
     success_count_match = re.search(
         r'flask_http_request_total\{method="GET",status="200"\}\s+([\d.]+)', metrics_text)
     success_count = float(success_count_match.group(1)) if success_count_match else 0.0
-
-    # Extract sum for successful response times for /heavy-task
+ 
     success_sum_match = re.search(
         r'flask_http_request_duration_seconds_sum\{method="GET",path="/heavy-task",status="200"\}\s+([\d.]+)', metrics_text)
     success_sum = float(success_sum_match.group(1)) if success_sum_match else 0.0
@@ -87,11 +84,9 @@ def parse_metrics(metrics_text):
     success_time_count_match = re.search(
         r'flask_http_request_duration_seconds_count\{method="GET",path="/heavy-task",status="200"\}\s+([\d.]+)', metrics_text)
     success_time_count = float(success_time_count_match.group(1)) if success_time_count_match else 0.0
-
-    # Compute average successful response time
+ 
     avg_success_response = success_sum / success_time_count if success_time_count > 0 else 1.0
-
-    # Calculate failed-to-success ratio
+ 
     failed_to_success_ratio = failed_count / success_count if success_count > 0 else float('inf')
  
     total_requests = failed_count + success_count
@@ -174,8 +169,7 @@ def fetch_server_metrics():
             parsed_data = parse_metrics(response.text)
             metrics_data[server] = {"metrics": parsed_data}
 
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching metrics from {server}: {e}")
+        except requests.exceptions.RequestException as e: 
  
             fallback_metrics = {
                 "avg_successful_response_time": 10.0,   
