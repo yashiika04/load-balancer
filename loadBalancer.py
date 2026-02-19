@@ -9,7 +9,7 @@ import time
 
 from loadBalancingAlgorithms.RoundRobin import RoundRobinLoadBalancer
 from loadBalancingAlgorithms.LeastConnection import LeastConnectionLoadBalancer
-from loadBalancingAlgorithms.RL_Agent import RLBasedLoadBalancer
+# from loadBalancingAlgorithms.RL_Agent import RLBasedLoadBalancer
  
 load_dotenv(override=True)  
  
@@ -18,10 +18,10 @@ LB_ALGORITHM = os.getenv("LB_ALGO")
 print("Algorithm selected: ",LB_ALGORITHM) 
  
  
-LOAD_BALANCER_PORT = int(os.environ.get("PORT_LOAD_BALANCER"))
-SERVER_1_PORT = int(os.environ.get("PORT_SERVER_1"))
-SERVER_2_PORT = int(os.environ.get("PORT_SERVER_2"))
-SERVER_3_PORT = int(os.environ.get("PORT_SERVER_3"))
+LOAD_BALANCER_PORT = int(os.environ.get("PORT_LOAD_BALANCER")) # type: ignore
+SERVER_1_PORT = int(os.environ.get("PORT_SERVER_1")) # type: ignore
+SERVER_2_PORT = int(os.environ.get("PORT_SERVER_2")) # type: ignore
+SERVER_3_PORT = int(os.environ.get("PORT_SERVER_3")) # type: ignore
 
 app = Flask(__name__) 
   
@@ -48,8 +48,8 @@ class LoadBalancer:
             self.strategy = RoundRobinLoadBalancer(servers)
         elif LB_ALGORITHM == "LeastConnection":
             self.strategy = LeastConnectionLoadBalancer(servers)
-        elif LB_ALGORITHM == "RLAgent":
-            self.strategy = RLBasedLoadBalancer(servers, policy_dir, serverMetricsUrl)
+        # elif LB_ALGORITHM == "RLAgent":
+        #     self.strategy = RLBasedLoadBalancer(servers, policy_dir, serverMetricsUrl)
         else:
             raise ValueError(f"Invalid Load Balancing Algorithm: {LB_ALGORITHM}")
 
@@ -163,7 +163,7 @@ def fetch_server_metrics():
     metrics_data = {}
     for server in SERVERS:
         try:
-            response = requests.get(f"{server}/metrics", timeout=5)
+            response = requests.get(f"{server}/metrics", timeout=10)
             response.raise_for_status()   
  
             parsed_data = parse_metrics(response.text)
