@@ -1,0 +1,19 @@
+Trial,Success Rate (%),Batch Time (s),Successes,Failures,Total Requests,Error
+1,100.00,184.45,100,0,100,
+
+SUMMARY STATISTICS
+Metric,Value
+Algorithm,RLAgent
+Total Trials,1
+Valid Trials,1
+Failed Trials,0
+
+Success Rate Mean (%),100.00
+Success Rate Std Dev (%),0.00
+Success Rate Min (%),100.00
+Success Rate Max (%),100.00
+
+Batch Time Mean (s),184.45
+Batch Time Std Dev (s),0.00
+Batch Time Min (s),184.45
+Batch Time Max (s),184.45

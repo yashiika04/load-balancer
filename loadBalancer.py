@@ -9,7 +9,7 @@ import time
 
 from loadBalancingAlgorithms.RoundRobin import RoundRobinLoadBalancer
 from loadBalancingAlgorithms.LeastConnection import LeastConnectionLoadBalancer
-# from loadBalancingAlgorithms.RL_Agent import RLBasedLoadBalancer
+from loadBalancingAlgorithms.RL_Agent import RLBasedLoadBalancer
  
 load_dotenv(override=True)  
  
@@ -48,8 +48,8 @@ class LoadBalancer:
             self.strategy = RoundRobinLoadBalancer(servers)
         elif LB_ALGORITHM == "LeastConnection":
             self.strategy = LeastConnectionLoadBalancer(servers)
-        # elif LB_ALGORITHM == "RLAgent":
-        #     self.strategy = RLBasedLoadBalancer(servers, policy_dir, serverMetricsUrl)
+        elif LB_ALGORITHM == "RLAgent":
+            self.strategy = RLBasedLoadBalancer(servers, policy_dir, serverMetricsUrl)
         else:
             raise ValueError(f"Invalid Load Balancing Algorithm: {LB_ALGORITHM}")
 
@@ -75,6 +75,8 @@ def parse_metrics(metrics_text):
     success_count_match = re.search(
         r'flask_http_request_total\{method="GET",status="200"\}\s+([\d.]+)', metrics_text)
     success_count = float(success_count_match.group(1)) if success_count_match else 0.0
+
+    total_requests = failed_count + success_count
  
     success_sum_match = re.search(
         r'flask_http_request_duration_seconds_sum\{method="GET",path="/heavy-task",status="200"\}\s+([\d.]+)', metrics_text)
@@ -87,9 +89,10 @@ def parse_metrics(metrics_text):
  
     avg_success_response = success_sum / success_time_count if success_time_count > 0 else 1.0
  
-    failed_to_success_ratio = failed_count / success_count if success_count > 0 else float('inf')
+    # failed_to_success_ratio = failed_count / success_count if success_count > 0 else float('inf')
+    failed_to_success_ratio = failed_count / success_count if success_count > 0 else (float('inf') if total_requests > 0 else 0.5)
  
-    total_requests = failed_count + success_count
+    
 
     return {
         "failed_requests": failed_count,
@@ -99,6 +102,18 @@ def parse_metrics(metrics_text):
         "total_requests": total_requests
     } 
       
+@app.route("/")
+def home():
+    return jsonify({
+        "service": "Load Balancer",
+        "algorithm": LB_ALGORITHM,
+        "available_routes": [
+            "/health-check",
+            "/heavy-task",
+            "/server-metrics"
+        ]
+    })
+
 
 @app.route("/health-check")
 def health_check():

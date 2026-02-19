@@ -191,6 +191,10 @@ class RLBasedLoadBalancer:
             print(f"Failed to initialize RL model: {e}")
 
     def select_optimal_server(self):
+        epsilon = 0.2  # 20% random exploration
+        if random.random() < epsilon:
+            return random.choice(self.servers)
+    
         if self.use_rl_model:
             try:
                 time_step = self.env.reset()
