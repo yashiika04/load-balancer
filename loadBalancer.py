@@ -37,7 +37,7 @@ SERVERS = [
  
 server_pool = itertools.cycle(SERVERS)
 
-policy_dir = "loadBalancingAlgorithms/saved_policies/load_balancing_trained_policy"
+policy_dir = "loadBalancingAlgorithms/saved_policies/load_balancing_trained_policy1"
 serverMetricsUrl = "http://localhost:8005/server-metrics"
 
 class LoadBalancer:
@@ -132,12 +132,12 @@ def proxy_request():
     Uses ThreadPoolExecutor to send multiple requests in parallel.
     """
     
-    TOTAL_REQUESTS = 40
+    TOTAL_REQUESTS = 500
     successes = 0
     failures = 0
     details = []
 
-    with ThreadPoolExecutor(max_workers=TOTAL_REQUESTS) as executor:
+    with ThreadPoolExecutor(max_workers=50) as executor:
         future_to_info = {}
         for i in range(TOTAL_REQUESTS):
             try:

@@ -8,7 +8,7 @@ import random
 import requests
 
 # Load the trained RL policy   
-policy_dir = "loadBalancingAlgorithms/saved_policies/load_balancing_trained_policy"
+policy_dir = "loadBalancingAlgorithms/saved_policies/load_balancing_trained_policy1"
 
 serverMetricsUrl = "http://localhost:8005/server-metrics"
 _num_servers = 3
@@ -51,7 +51,7 @@ def compute_reward_from_state(state_row, alpha=1.0, beta=1.0, gamma=1.0):
     throughput = total_requests * (1 - failure_ratio)
     
     # Reward: lower latency and lower failure ratio are good; higher throughput is good.
-    reward = - (alpha * latency + beta * failure_ratio) + gamma * throughput
+    reward = - (alpha * latency) 
     
     return reward
 
@@ -193,28 +193,55 @@ class RLBasedLoadBalancer:
     def select_optimal_server(self):
         epsilon = 0.2  # 20% random exploration
         if random.random() < epsilon:
-            return random.choice(self.servers)
-    
-        if self.use_rl_model:
+            chosen = random.choice(self.servers)
+            print(f"Exploration: randomly chosen server {chosen}")
+            return chosen
+        
+        if not self.use_rl_model:
+            print("RL model unavailable, will run fallback loop")
+        else:
+
             try:
+                print("---- RL DEBUG START ----")
+                print("Agent object:", self.agent)
+                print("Available signatures:", getattr(self.agent, "signatures", None))
+
                 time_step = self.env.reset()
-                action_step = self.agent.action(time_step)
-                action_index = int(action_step.action.numpy())
+
+                print("Time step type:", type(time_step))
+                print("Time step observation shape:", time_step.observation.shape)
+                print("Time step observation:", time_step.observation)
+
+
+                action_tensor = self.agent.action(time_step)   # returns raw int32 tensor shape (1,)
+                action_index = int(action_tensor.numpy()[0])
+
+                # action_step = self.agent.action(time_step)
+                # print("Action step:", action_step)
+                # action = action_step.action.numpy()[0]
+                # action_index = int(action)
+
+                print("Chosen action index:", action_index)
+
                 selected_server = self.servers[action_index]
+        
+                print(f"RL agent suggested index {action_index} -> {selected_server}")
+
 
                 try:
-                    response = requests.get(selected_server, timeout=3)
+                    response = requests.get(selected_server, timeout=100)
+                    print(f"Health check for RL choice {selected_server}: {response.status_code}")
                     if response.status_code == 200:
                         print(f"RL agent selected server index: {action_index}")
                         return selected_server
                     else:
                         print(f"RL-selected server unhealthy: {response.status_code}")
                 except requests.exceptions.RequestException as e:
-                    print()
+                    print(f"Health check request to RL choice failed: {e}")
 
             except Exception as e:
-                print()
-
+                print(f"Exception during RL decision: {e}")
+            
         # Fallback
         for server in random.sample(self.servers, len(self.servers)):
             try:
@@ -226,4 +253,5 @@ class RLBasedLoadBalancer:
                 continue
 
         fallback = random.choice(self.servers)
+        print(f"Fallback picking random server {fallback} (all health checks failed)")
         return fallback

@@ -20,7 +20,7 @@ SERVER_PORT = 8000
 limiter = Limiter(
     key_func=get_remote_address,
     app=app,
-    default_limits=["5 per second"],
+    default_limits=["3 per second"],
 )
 
 # Prometheus auto metrics
@@ -88,7 +88,7 @@ server_capacity = {
 
 
 @app.route("/heavy-task")
-@limiter.limit(lambda: f"{server_capacity.get(SERVER_PORT, 5)} per second")
+@limiter.limit(lambda: f"{server_capacity.get(SERVER_PORT, 3)} per second")
 def heavy_task():
     try:
         return heavy_operation()

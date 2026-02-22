@@ -1,19 +1,23 @@
 Trial,Success Rate (%),Batch Time (s),Successes,Failures,Total Requests,Error
-1,100.00,184.45,100,0,100,
+1,0.00,652.05,0,0,0,Timeout
+2,0.00,652.04,0,0,0,Timeout
+3,0.00,652.04,0,0,0,Timeout
+4,0.00,168.54,0,0,0,"('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))"
+5,0.00,4.07,0,0,0,"HTTPConnectionPool(host='localhost', port=8005): Max retries exceeded with url: /heavy-task (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x00000283EF031960>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))"
 
 SUMMARY STATISTICS
 Metric,Value
 Algorithm,RLAgent
-Total Trials,1
-Valid Trials,1
-Failed Trials,0
+Total Trials,5
+Valid Trials,0
+Failed Trials,5
 
-Success Rate Mean (%),100.00
+Success Rate Mean (%),0.00
 Success Rate Std Dev (%),0.00
-Success Rate Min (%),100.00
-Success Rate Max (%),100.00
+Success Rate Min (%),0.00
+Success Rate Max (%),0.00
 
-Batch Time Mean (s),184.45
+Batch Time Mean (s),0.00
 Batch Time Std Dev (s),0.00
-Batch Time Min (s),184.45
-Batch Time Max (s),184.45
+Batch Time Min (s),0.00
+Batch Time Max (s),0.00
