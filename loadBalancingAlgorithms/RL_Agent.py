@@ -6,11 +6,10 @@ from tf_agents.trajectories import time_step as ts
 import numpy as np
 import random
 import requests
+import re
 
 # Load the trained RL policy   
 policy_dir = "loadBalancingAlgorithms/saved_policies/load_balancing_trained_policy1"
-
-serverMetricsUrl = "http://localhost:8005/server-metrics"
 _num_servers = 3
 
 global SERVERS
@@ -50,14 +49,47 @@ def compute_reward_from_state(state_row, alpha=1.0, beta=1.0, gamma=1.0):
     # Compute throughput as an example: the effective successful request ratio times total requests.
     throughput = total_requests * (1 - failure_ratio)
     
-    # Reward: lower latency and lower failure ratio are good; higher throughput is good.
-    reward = - (alpha * latency) 
+    SLA_THRESHOLD = 1.5  # seconds
+    latency_penalty = max(0, latency - SLA_THRESHOLD)
+    reward = -(alpha * latency_penalty + beta * failure_ratio)
+
     
     return reward
 
+def _parse_prometheus_metrics(metrics_text: str) -> dict:
+    """Extract aggregated metrics from Prometheus text format."""
+    failed_count_match = re.search(
+        r'flask_http_request_total\{method="GET",status="429"\}\s+([\d.]+)', metrics_text)
+    failed_count = float(failed_count_match.group(1)) if failed_count_match else 0.0
+
+    success_count_match = re.search(
+        r'flask_http_request_total\{method="GET",status="200"\}\s+([\d.]+)', metrics_text)
+    success_count = float(success_count_match.group(1)) if success_count_match else 0.0
+
+    total_requests = failed_count + success_count
+
+    success_sum_match = re.search(
+        r'flask_http_request_duration_seconds_sum\{method="GET",path="/heavy-task",status="200"\}\s+([\d.]+)', metrics_text)
+    success_sum = float(success_sum_match.group(1)) if success_sum_match else 0.0
+
+    success_time_count_match = re.search(
+        r'flask_http_request_duration_seconds_count\{method="GET",path="/heavy-task",status="200"\}\s+([\d.]+)', metrics_text)
+    success_time_count = float(success_time_count_match.group(1)) if success_time_count_match else 0.0
+
+    avg_success_response = success_sum / success_time_count if success_time_count > 0 else 1.0
+
+    failed_to_success_ratio = failed_count / success_count if success_count > 0 else (float('inf') if total_requests > 0 else 0.5)
+
+    return {
+        "avg_successful_response_time": avg_success_response,
+        "total_requests": total_requests,
+        "failed_to_success_ratio": failed_to_success_ratio
+    }
+
+
 def _generate_state():
     """
-    Fetch performance metrics from the aggregated metrics endpoint.
+    Fetch performance metrics from backend servers directly.
     For each server, extract:
       - avg_successful_response_time (latency)
       - total_requests
@@ -67,33 +99,24 @@ def _generate_state():
     latency = []
     requests_handled = []
     failed_to_success_ratio = []
-    
-    try:
-        response = requests.get(serverMetricsUrl)
-        response.raise_for_status()
-        server_metrics = response.json()
-         
-        for server in SERVERS:
-            data = server_metrics.get(server, {})
-            if "metrics" in data and data["metrics"] is not None:
-                metrics = data["metrics"]
-                
-                print(f"{server}: {metrics}") 
 
-                latency.append(metrics.get("avg_successful_response_time", 1.0))
-                requests_handled.append(metrics.get("total_requests", 0.0))
-                failed_to_success_ratio.append(metrics.get("failed_to_success_ratio", 0.5))
-            else: 
-                latency.append(2.0)
-                requests_handled.append(0.0)
-                failed_to_success_ratio.append(0.1)
+    for server in SERVERS:
+        try:
+            response = requests.get(f"{server}/metrics", timeout=2)
+            response.raise_for_status()
+            backend_metrics = _parse_prometheus_metrics(response.text)
 
-    except requests.RequestException as e:
-        print(f"Error fetching server metrics: {e}")
-        latency = [1.0] * _num_servers
-        requests_handled = [0.0] * _num_servers
-        failed_to_success_ratio = [0.5] * _num_servers
-    
+            print(f"{server}: {backend_metrics}")
+
+            latency.append(backend_metrics.get("avg_successful_response_time", 1.0))
+            requests_handled.append(backend_metrics.get("total_requests", 0.0))
+            failed_to_success_ratio.append(backend_metrics.get("failed_to_success_ratio", 0.5))
+        except requests.RequestException as e:
+            print(f"Error fetching metrics from {server}: {e}")
+            latency.append(2.0)
+            requests_handled.append(0.0)
+            failed_to_success_ratio.append(0.5)
+
     state = np.column_stack([latency, requests_handled, failed_to_success_ratio])
 
     print("State :", state)
@@ -176,9 +199,8 @@ class LoadBalancerEnv(py_environment.PyEnvironment):
  
 
 class RLBasedLoadBalancer:
-    def __init__(self, servers, policy_dir, metrics_url):
+    def __init__(self, servers, policy_dir):
         self.servers = servers
-        self.serverMetricsUrl = metrics_url
         self._num_servers = len(servers)
         self.use_rl_model = False
 
@@ -229,7 +251,7 @@ class RLBasedLoadBalancer:
 
 
                 try:
-                    response = requests.get(selected_server, timeout=100)
+                    response = requests.get(selected_server, timeout=2)
                     print(f"Health check for RL choice {selected_server}: {response.status_code}")
                     if response.status_code == 200:
                         print(f"RL agent selected server index: {action_index}")

@@ -67,7 +67,7 @@ def log_request(response):
 
 def heavy_operation():
     """Simulate a heavy computation with a random delay"""
-    delay = random.uniform(0.5, 2)
+    delay = random.uniform(0.2, 0.5)
     time.sleep(delay)
     return "OK!!"
 
@@ -88,7 +88,7 @@ server_capacity = {
 
 
 @app.route("/heavy-task")
-@limiter.limit(lambda: f"{server_capacity.get(SERVER_PORT, 3)} per second")
+@limiter.limit(lambda: f"{server_capacity.get(SERVER_PORT, 5)} per second")
 def heavy_task():
     try:
         return heavy_operation()
@@ -109,4 +109,4 @@ def metrics_endpoint():
 
 if __name__ == "__main__":
     SERVER_PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
-    app.run(host="0.0.0.0", port=SERVER_PORT)
+    app.run(host="0.0.0.0", port=SERVER_PORT, threaded = True)

@@ -49,7 +49,7 @@ class LoadBalancer:
         elif LB_ALGORITHM == "LeastConnection":
             self.strategy = LeastConnectionLoadBalancer(servers)
         elif LB_ALGORITHM == "RLAgent":
-            self.strategy = RLBasedLoadBalancer(servers, policy_dir, serverMetricsUrl)
+            self.strategy = RLBasedLoadBalancer(servers, policy_dir)
         else:
             raise ValueError(f"Invalid Load Balancing Algorithm: {LB_ALGORITHM}")
 
@@ -137,7 +137,7 @@ def proxy_request():
     failures = 0
     details = []
 
-    with ThreadPoolExecutor(max_workers=50) as executor:
+    with ThreadPoolExecutor(max_workers=150) as executor:
         future_to_info = {}
         for i in range(TOTAL_REQUESTS):
             try:
@@ -178,7 +178,7 @@ def fetch_server_metrics():
     metrics_data = {}
     for server in SERVERS:
         try:
-            response = requests.get(f"{server}/metrics", timeout=10)
+            response = requests.get(f"{server}/metrics", timeout=2)
             response.raise_for_status()   
  
             parsed_data = parse_metrics(response.text)
@@ -201,4 +201,4 @@ def fetch_server_metrics():
 
  
 if __name__ == "__main__":  
-    app.run(host="0.0.0.0", port=LOAD_BALANCER_PORT)
+    app.run(host="0.0.0.0", port=LOAD_BALANCER_PORT, threaded=True)
