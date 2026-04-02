@@ -37,7 +37,12 @@ SERVERS = [
  
 server_pool = itertools.cycle(SERVERS)
 
-policy_dir = "loadBalancingAlgorithms/saved_policies/load_balancing_trained_policy1"
+RL_POLICY_DIR = os.getenv(
+    "RL_POLICY_DIR",
+    "loadBalancingAlgorithms/saved_policies/load_balancing_trained_policy1"
+)
+RL_REWARD_MODE = os.getenv("RL_REWARD_MODE", "full")
+policy_dir = RL_POLICY_DIR
 serverMetricsUrl = "http://localhost:8005/server-metrics"
 
 class LoadBalancer:
@@ -87,7 +92,7 @@ def parse_metrics(metrics_text):
         r'flask_http_request_duration_seconds_count\{method="GET",path="/heavy-task",status="200"\}\s+([\d.]+)', metrics_text)
     success_time_count = float(success_time_count_match.group(1)) if success_time_count_match else 0.0
  
-    avg_success_response = success_sum / success_time_count if success_time_count > 0 else 1.0
+    avg_success_response = success_sum / success_time_count if success_time_count > 0 else 0.0
  
     # failed_to_success_ratio = failed_count / success_count if success_count > 0 else float('inf')
     failed_to_success_ratio = failed_count / success_count if success_count > 0 else (float('inf') if total_requests > 0 else 0.5)

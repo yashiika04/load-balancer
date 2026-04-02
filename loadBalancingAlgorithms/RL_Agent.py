@@ -1,3 +1,4 @@
+import os
 import tensorflow as tf 
 from tf_agents.environments import tf_py_environment  
 from tf_agents.environments import py_environment  
@@ -8,9 +9,15 @@ import random
 import requests
 import re
 
-# Load the trained RL policy   
-policy_dir = "loadBalancingAlgorithms/saved_policies/load_balancing_trained_policy1"
+REWARD_MODE = os.getenv("RL_REWARD_MODE", "full")
+
+# Load the trained RL policy
+policy_dir = os.getenv(
+    "RL_POLICY_DIR",
+    "loadBalancingAlgorithms/saved_policies/load_balancing_trained_policy1"
+)
 _num_servers = 3
+
 
 global SERVERS
 SERVERS = [
@@ -29,31 +36,43 @@ except Exception as e:
     use_rl_model = False
 
 
-def compute_reward_from_state(state_row, alpha=1.0, beta=1.0, gamma=1.0):
+def compute_reward_from_state(state_row, alpha=1.0, beta=1.0, gamma=1.0, mode=None):
     """
     Compute a reward from a state row (NumPy array) representing a server's metrics.
-    
+
     Args:
       state_row (numpy.array): Array with [latency, total_requests, failed_to_success_ratio].
       alpha (float): Weight for latency penalty.
       beta (float): Weight for failure ratio penalty.
       gamma (float): Weight for throughput reward.
-      
+      mode (str): Reward scheme: 'full', 'latency', or 'sla'.
+
     Returns:
       float: Computed reward.
     """
-    latency = state_row[0]
-    total_requests = state_row[1]
-    failure_ratio = state_row[2]
-    
-    # Compute throughput as an example: the effective successful request ratio times total requests.
-    throughput = total_requests * (1 - failure_ratio)
-    
-    SLA_THRESHOLD = 1.5  # seconds
-    latency_penalty = max(0, latency - SLA_THRESHOLD)
-    reward = -(alpha * latency_penalty + beta * failure_ratio)
+    latency = float(state_row[0])
+    total_requests = float(state_row[1])
+    failure_ratio = float(state_row[2])
 
-    
+    # Compute throughput as the effective successful request ratio times total requests.
+    throughput = total_requests * max(0.0, 1.0 - failure_ratio)
+
+    if mode is None:
+        mode = REWARD_MODE
+
+    mode = mode.lower()
+
+    if mode == "full":
+        reward = - (alpha * latency + beta * failure_ratio) + gamma * throughput
+    elif mode == "latency":
+        reward = - (alpha * latency)
+    elif mode in ("sla", "latency_failure", "failure"):
+        SLA_THRESHOLD = 1.5  # seconds
+        latency_penalty = max(0.0, latency - SLA_THRESHOLD)
+        reward = - (alpha * latency_penalty + beta * failure_ratio)
+    else:
+        raise ValueError(f"Unsupported reward mode: {mode}")
+
     return reward
 
 def _parse_prometheus_metrics(metrics_text: str) -> dict:
@@ -125,15 +144,16 @@ def _generate_state():
 
 class LoadBalancerEnv(py_environment.PyEnvironment):
 
-    def __init__(self, servers):
+    def __init__(self, servers, reward_mode=None):
         """
         Args:
-          serverMetricsUrl: URL that returns aggregated server metrics in JSON format.
-          servers: List of server URLs 
+          servers: List of server URLs
+          reward_mode: Reward scheme to use ('full', 'latency', 'sla').
         """
         super(LoadBalancerEnv, self).__init__()
         self._servers = servers
-        self._num_servers = len(servers) 
+        self._num_servers = len(servers)
+        self._reward_mode = reward_mode or REWARD_MODE
 
         # Observation: For each server, we consider 3 metrics:
         # [avg_successful_response_time (latency), total_requests, failed_to_success_ratio]
@@ -185,7 +205,10 @@ class LoadBalancerEnv(py_environment.PyEnvironment):
        
         new_state = _generate_state() 
          
-        reward = compute_reward_from_state(new_state[chosen_index])
+        reward = compute_reward_from_state(
+            new_state[chosen_index],
+            mode=self._reward_mode
+        )
 
         # print(f"Reward: {reward}")
  
@@ -206,9 +229,11 @@ class RLBasedLoadBalancer:
 
         try:
             self.agent = tf.compat.v2.saved_model.load(policy_dir)
-            self.env = tf_py_environment.TFPyEnvironment(LoadBalancerEnv(servers))
+            self.env = tf_py_environment.TFPyEnvironment(
+                LoadBalancerEnv(servers, reward_mode=REWARD_MODE)
+            )
             self.use_rl_model = True
-            print("RL model and environment initialized.")
+            print(f"RL model and environment initialized using policy_dir={policy_dir} reward_mode={REWARD_MODE}.")
         except Exception as e:
             print(f"Failed to initialize RL model: {e}")
 
