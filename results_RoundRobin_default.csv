@@ -1,0 +1,39 @@
+Trial,Success Rate (%),Failure Rate (%),Throughput (req/s),Avg Latency (s),Load Variance,Batch Time (s),Successes,Failures,Total Requests,Error
+1,12.80,87.20,16.91,0.3830,1019.5556,3.78,64,436,500,
+
+SUMMARY STATISTICS
+Metric,Value
+Algorithm,RoundRobin
+Mode,default
+Total Trials,1
+Valid Trials,1
+Failed Trials,0
+
+Success Rate Mean (%),12.80
+Success Rate Std Dev (%),0.00
+Success Rate Min (%),12.80
+Success Rate Max (%),12.80
+Failure Rate Mean (%),87.20
+Failure Rate Std Dev (%),0.00
+Failure Rate Min (%),87.20
+Failure Rate Max (%),87.20
+
+Throughput Mean (req/s),16.91
+Throughput Std Dev (req/s),0.00
+Throughput Min (req/s),16.91
+Throughput Max (req/s),16.91
+
+Avg Latency Mean (s),0.3830
+Avg Latency Std Dev (s),0.0000
+Avg Latency Min (s),0.3830
+Avg Latency Max (s),0.3830
+
+Load Variance Mean,1019.5556
+Load Variance Std Dev,0.0000
+Load Variance Min,1019.5556
+Load Variance Max,1019.5556
+
+Batch Time Mean (s),3.78
+Batch Time Std Dev (s),0.00
+Batch Time Min (s),3.78
+Batch Time Max (s),3.78

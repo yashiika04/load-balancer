@@ -9,9 +9,10 @@ import time
 
 from loadBalancingAlgorithms.RoundRobin import RoundRobinLoadBalancer
 from loadBalancingAlgorithms.LeastConnection import LeastConnectionLoadBalancer
-from loadBalancingAlgorithms.RL_Agent import RLBasedLoadBalancer
  
 load_dotenv(override=True)  
+ 
+from loadBalancingAlgorithms.RL_Agent import RLBasedLoadBalancer
  
 LB_ALGORITHM = os.getenv("LB_ALGO")  
 
@@ -37,12 +38,25 @@ SERVERS = [
  
 server_pool = itertools.cycle(SERVERS)
 
-RL_POLICY_DIR = os.getenv(
-    "RL_POLICY_DIR",
-    "loadBalancingAlgorithms/saved_policies/load_balancing_trained_policy1"
-)
-RL_REWARD_MODE = os.getenv("RL_REWARD_MODE", "full")
-policy_dir = RL_POLICY_DIR
+RL_POLICY_DIR = os.getenv("RL_POLICY_DIR", "").strip()
+RL_REWARD_MODE = os.getenv("RL_REWARD_MODE", "model1").strip().lower()
+POLICY_DIRS = {
+    "model1": "loadBalancingAlgorithms/saved_policies/load_balancing_trained_policy_model1",
+    "model2": "loadBalancingAlgorithms/saved_policies/load_balancing_trained_policy_model2",
+    "model3": "loadBalancingAlgorithms/saved_policies/load_balancing_trained_policy_model3",
+    "model4": "loadBalancingAlgorithms/saved_policies/load_balancing_trained_policy_model4",
+    "model5": "loadBalancingAlgorithms/saved_policies/load_balancing_trained_policy_model5",
+}
+if RL_POLICY_DIR:
+    policy_dir = RL_POLICY_DIR
+    print(f"Using RL_POLICY_DIR override: {policy_dir}")
+else:
+    if RL_REWARD_MODE not in POLICY_DIRS:
+        print(f"Warning: RL_REWARD_MODE='{RL_REWARD_MODE}' is not recognized. Falling back to model1.")
+        RL_REWARD_MODE = "model1"
+    policy_dir = POLICY_DIRS[RL_REWARD_MODE]
+    print(f"Using policy_dir for reward mode '{RL_REWARD_MODE}': {policy_dir}")
+
 serverMetricsUrl = "http://localhost:8005/server-metrics"
 
 class LoadBalancer:
@@ -57,6 +71,8 @@ class LoadBalancer:
             self.strategy = RLBasedLoadBalancer(servers, policy_dir)
         else:
             raise ValueError(f"Invalid Load Balancing Algorithm: {LB_ALGORITHM}")
+        
+        print(f"Selected strategy: {self.strategy}")
 
     def select_optimal_server(self):
         return self.strategy.select_optimal_server()
@@ -142,7 +158,7 @@ def proxy_request():
     failures = 0
     details = []
 
-    with ThreadPoolExecutor(max_workers=150) as executor:
+    with ThreadPoolExecutor(max_workers=50) as executor:
         future_to_info = {}
         for i in range(TOTAL_REQUESTS):
             try:

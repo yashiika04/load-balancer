@@ -16,11 +16,18 @@ app = Flask(__name__)
 # Server port (default)
 SERVER_PORT = 8000
 
-# Rate limiter
+# Server capacity limits
+server_capacity = {
+    8000: 10,
+    8001: 15,
+    8002: 12
+}
+
+# Single rate limiter — no default limits, only /heavy-task is limited
 limiter = Limiter(
     key_func=get_remote_address,
     app=app,
-    default_limits=["3 per second"],
+    default_limits=[],  # ← removed default, nothing gets rate limited by default
 )
 
 # Prometheus auto metrics
@@ -79,14 +86,6 @@ def index():
     return jsonify({"message": f"Server running on port {SERVER_PORT}"})
 
 
-# Server capacity limits
-server_capacity = {
-    8000: 15,
-    8001: 10,
-    8002: 5,
-}
-
-
 @app.route("/heavy-task")
 @limiter.limit(lambda: f"{server_capacity.get(SERVER_PORT, 5)} per second")
 def heavy_task():
@@ -97,6 +96,7 @@ def heavy_task():
 
 
 @app.route("/metrics")
+@limiter.exempt
 def metrics_endpoint():
     try:
         metrics_data = generate_latest(REGISTRY)
@@ -105,8 +105,18 @@ def metrics_endpoint():
         return str(e), 500
 
 
+@app.route("/health-check")
+@limiter.exempt
+def health_check():
+    return jsonify({
+        "status": "OK",
+        "port": SERVER_PORT,
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+    })
+
+
 # ------------------ Run ------------------
 
 if __name__ == "__main__":
     SERVER_PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
-    app.run(host="0.0.0.0", port=SERVER_PORT, threaded = True)
+    app.run(host="0.0.0.0", port=SERVER_PORT, threaded=True)

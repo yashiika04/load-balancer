@@ -1,0 +1,43 @@
+Trial,Success Rate (%),Failure Rate (%),Throughput (req/s),Avg Latency (s),Load Variance,Batch Time (s),Successes,Failures,Total Requests,Error
+1,98.80,1.20,6.71,0.3653,43910.8889,73.59,494,6,500,
+2,95.60,4.40,10.24,0.3666,33705.5556,46.69,478,22,500,
+3,86.20,13.80,9.32,0.3647,43024.8889,46.24,431,69,500,
+4,91.40,8.60,8.78,0.3654,13804.2222,52.02,457,43,500,
+5,97.60,2.40,9.99,0.3650,20094.8889,48.86,488,12,500,
+
+SUMMARY STATISTICS
+Metric,Value
+Algorithm,RLAgent
+Mode,model1
+Total Trials,5
+Valid Trials,5
+Failed Trials,0
+
+Success Rate Mean (%),93.92
+Success Rate Std Dev (%),5.15
+Success Rate Min (%),86.20
+Success Rate Max (%),98.80
+Failure Rate Mean (%),6.08
+Failure Rate Std Dev (%),5.15
+Failure Rate Min (%),1.20
+Failure Rate Max (%),13.80
+
+Throughput Mean (req/s),9.01
+Throughput Std Dev (req/s),1.40
+Throughput Min (req/s),6.71
+Throughput Max (req/s),10.24
+
+Avg Latency Mean (s),0.3654
+Avg Latency Std Dev (s),0.0007
+Avg Latency Min (s),0.3647
+Avg Latency Max (s),0.3666
+
+Load Variance Mean,30908.0889
+Load Variance Std Dev,13538.6763
+Load Variance Min,13804.2222
+Load Variance Max,43910.8889
+
+Batch Time Mean (s),53.48
+Batch Time Std Dev (s),11.47
+Batch Time Min (s),46.24
+Batch Time Max (s),73.59
