@@ -153,12 +153,12 @@ def proxy_request():
     Uses ThreadPoolExecutor to send multiple requests in parallel.
     """
     
-    TOTAL_REQUESTS = 500
+    TOTAL_REQUESTS = 400
     successes = 0
     failures = 0
     details = []
 
-    with ThreadPoolExecutor(max_workers=50) as executor:
+    with ThreadPoolExecutor(max_workers=40) as executor:
         future_to_info = {}
         for i in range(TOTAL_REQUESTS):
             try:
